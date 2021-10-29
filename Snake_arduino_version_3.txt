@@ -1,4 +1,4 @@
-#include "LedControl.h"
+п»ї#include "LedControl.h"
 
 /*
  Now we need a LedControl to work with.
@@ -11,10 +11,36 @@
 LedControl lc=LedControl(12,10,11,1);
 
 
+int tailX [64] ; 				// С…СЂР°РЅРёС‚ РєРѕРѕСЂРґРёРЅР°С‚С‹ РІСЃРµРіРѕ С‚РµР»Р° Р·РјРµРё РѕС‚ 1 РґРѕ 8
+int tailY [64] ; 
+int image [8][8];
+int direct = 0;					//РЅР°С‡Р°Р»СЊРЅРѕ РЅР°РїСЂР°РІР»РµРЅРёРµ РґРІРёР¶РµРЅРёСЏ (0-РІРїСЂР°РІРѕ, 1-РІРЅРёР·, 2-РІР»РµРІРѕ, 3-РІРІРµСЂС… )
+
+
+void StartGame(Snake &snake,Apple &apple); 	// РЅР°С‡Р°Р»Рѕ РёРіСЂС‹ 
+void ClearImage(); 				// РѕС‡РёСЃС‚РєР° РјР°СЃСЃРёРІР° РѕС‚РІРµС‡Р°СЋС‰РµРіРѕ Р·Р° РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ 
+void ClearTail(); 				// РѕС‡РёС‰Р°РµС‚ РјР°СЃСЃРёРІ С‚РµР»Р° Р·РјРµРё
+void TailUpdate(Snake &snake, Apple &apple);	// РѕР±РЅРѕРІР»СЏРµС‚ С‚РµР»Рѕ Р·РјРµРё РІ СЃРѕРѕС‚РІРµС‚СЃРІРёРё СЃ РїРµСЂРµРјРµС‰РµРЅРёРµРј РіРѕР»РѕРІС‹ Рё С‚Р°РєР¶Рµ РїСЂРѕРІРµСЂСЏРµС‚ РЅРµ СѓРґР°СЂРёР»Р°СЃСЊ Р»Рё Р·РјРµСЏ РѕР± СЃРµР±СЏ РёР»Рё СЃС‚РµРЅСѓ
+void ImageUpdate(Snake snake,Apple apple);
+void Draw();
+void Move(Snake &snake,Apple &apple,int direction);
+void GameOver();
+
+//РёРіСЂРѕРІС‹Рµ РѕР±СЉРµРєС‚С‹
+Snake python;
+Apple apple;
+
+// РЅРµРѕР±С…РѕРґРёРјС‹Рµ РјРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РєРЅРѕРїРєР°РјРё
+boolean butt1_flag = 0;
+boolean butt1;
+boolean butt2_flag = 0;
+boolean butt2;
+unsigned long last_press;
+
 struct Snake
 {
-  int x; //координата головы по х
-  int y; //координата головы по у
+  int x; //РєРѕРѕСЂРґРёРЅР°С‚Р° РіРѕР»РѕРІС‹ РїРѕ С…
+  int y; //РєРѕРѕСЂРґРёРЅР°С‚Р° РіРѕР»РѕРІС‹ РїРѕ Сѓ
   int length;
  // bool flagY;
   Snake()
@@ -33,8 +59,8 @@ struct Snake
 };
 struct Apple
 {
-    int x; //координата яблока по х
-    int y; //координата яблока по у
+    int x; //РєРѕРѕСЂРґРёРЅР°С‚Р° СЏР±Р»РѕРєР° РїРѕ С…
+    int y; //РєРѕРѕСЂРґРёРЅР°С‚Р° СЏР±Р»РѕРєР° РїРѕ Сѓ
     Apple()
     {
         int x = 0;
@@ -48,25 +74,12 @@ struct Apple
 };
 
 
-int tailX [64] ; // хранит координаты всего тела змеи от 1 до 8
-int tailY [64] ; 
-int image [8][8];
-int direct = 0;
-
-void startGame(Snake &snake,Apple &apple);
-void clearImage();
-void clearTail();
-void TailUpdate(Snake &snake, Apple &apple);
-void ImageUpdate(Snake snake,Apple apple);
-void draw();
-void Move(Snake &snake,Apple &apple,int direction);
-void GameOver();
 
 
-void startGame(Snake &snake,Apple &apple)
+void StartGame(Snake &snake,Apple &apple)
 {
-    clearImage();
-    clearTail();
+    ClearImage();
+    ClearTail();
     direct=0;
     snake.length = 1;
     snake.x=1;
@@ -78,7 +91,7 @@ void startGame(Snake &snake,Apple &apple)
     return;
 }
 
-void GameOver()
+void GameOver() 	// С…РѕС‚РµР» СЃРґРµР»Р°С‚СЊ Р·Р°СЃС‚Р°РІРєСѓ РѕРєРѕРЅС‡Р°РЅРёСЏ РёРіСЂС‹ (СЃС‚Р°Р»Рѕ Р»РµРЅСЊ)
 {
    for(int j=5;j<8;j++)
    {
@@ -87,27 +100,27 @@ void GameOver()
    lc.setColumn(0,6,pow(2,3)+pow(2,4)+pow(2,2)+pow(2,5));
    delay(1000);
 }
-void TailUpdate(Snake &snake, Apple &apple) //обновляет массив с координатами тела
+void TailUpdate(Snake &snake, Apple &apple) 			//РѕР±РЅРѕРІР»СЏРµС‚ РјР°СЃСЃРёРІ СЃ РєРѕРѕСЂРґРёРЅР°С‚Р°РјРё С‚РµР»Р°
 {
-    if(snake.x>8 or snake.y>8 or snake.x<0 or  snake.y<0) // Если выходит за границы поля - игра оконкена
+    if(snake.x>8 or snake.y>8 or snake.x<0 or  snake.y<0) 	// Р•СЃР»Рё РІС‹С…РѕРґРёС‚ Р·Р° РіСЂР°РЅРёС†С‹ РїРѕР»СЏ - РёРіСЂР° РѕРєРѕРЅРєРµРЅР°
     {
         GameOver();
-        startGame(snake,apple);
+        StartGame(snake,apple);
     }
     for (int i=1; i< snake.length;i++)
       {
         if(snake.x == tailX[i]and snake.y == tailY[i])
           {
           GameOver();
-          startGame(snake,apple);
+          StartGame(snake,apple);
           }
       }
-    if(snake.x == apple.x and snake.y == apple.y) // если наткнулся на яблоко, нужно увеличить длинну и изменить положение яблока
+    if(snake.x == apple.x and snake.y == apple.y) 		// РµСЃР»Рё РЅР°С‚РєРЅСѓР»СЃСЏ РЅР° СЏР±Р»РѕРєРѕ, РЅСѓР¶РЅРѕ СѓРІРµР»РёС‡РёС‚СЊ РґР»РёРЅРЅСѓ Рё РёР·РјРµРЅРёС‚СЊ РїРѕР»РѕР¶РµРЅРёРµ СЏР±Р»РѕРєР°
     {
         snake.length += 1;
         apple.x = random(0,8);
         apple.y = random(0,8);
-        for (int i=0; i< snake.length;i++)
+        for (int i=0; i< snake.length;i++)			//РѕС‡РµРЅСЊ РїР»РѕС…РѕР№ СЂР°РЅРґРѕРј Сѓ СЏР±Р»РѕРєР°, РѕРЅРѕ РјРѕР¶РµС‚ РїРѕРїР°СЃС‚СЊ РІРЅСѓС‚СЂСЊ Р·РјРµРё, СЌС‚РѕС‚ РєРѕРґ РѕС‡РµРІРёРґРЅРѕ РЅРёРєР°Рє РЅРµ РёСЃРїСЂР°РІР»СЏРµС‚ СЃРёС‚СѓР°С†РёСЋ
         {
           if(apple.x == tailX[i] and apple.y == tailY[i])
             {
@@ -117,7 +130,7 @@ void TailUpdate(Snake &snake, Apple &apple) //обновляет массив с координатами те
         }
     }
     
-    // движение хвоста
+    								// РґРІРёР¶РµРЅРёРµ С…РІРѕСЃС‚Р°
     int bufferX; 
     int bufferY;
     int bufferXh = tailX [0];
@@ -125,42 +138,40 @@ void TailUpdate(Snake &snake, Apple &apple) //обновляет массив с координатами те
     tailX [0] = snake.x;
     tailY [0] = snake.y;
     for(int i=1; i <= snake.length;i++)
-    {
-    bufferX =  tailX [i];
-    bufferY =  tailY [i];
-    tailX [i] = bufferXh;
-    tailY [i] = bufferYh;
-    bufferXh = bufferX;
-    bufferYh = bufferY;
-    }
+    	{
+    	bufferX =  tailX [i];
+    	bufferY =  tailY [i];
+    	tailX [i] = bufferXh;
+    	tailY [i] = bufferYh;
+    	bufferXh = bufferX;
+    	bufferYh = bufferY;
+    	}
 
 }
-void ImageUpdate(Snake snake, Apple apple) // обновляет и заполняет поле
+void ImageUpdate(Snake snake, Apple apple) 			// РѕР±РЅРѕРІР»СЏРµС‚ Рё Р·Р°РїРѕР»РЅСЏРµС‚ РїРѕР»Рµ
 {   
-    clearImage();
-    image[apple.y][apple.x] = 2; 
-    for(int i=0;i<snake.length;i++)
-        {   
-            image[tailY[i]][tailX[i]] = 1;
-        }
+    	ClearImage();
+    	image[apple.y][apple.x] = 2; 
+	for(int i=0;i<snake.length;i++)  
+        	image[tailY[i]][tailX[i]] = 1;
 
    return;
 }
 
 
-void clearImage() // очищает поле от предыдущего кадра
+void ClearImage() 						// РѕС‡РёС‰Р°РµС‚ РїРѕР»Рµ РѕС‚ РїСЂРµРґС‹РґСѓС‰РµРіРѕ РєР°РґСЂР°
 {
 
     for(int i=0;i<8;i++)
     {
         for (int j=0;j<8;j++)
         {
-            image [i][j] = 0;
+		image [i][j] = 0;
         }
     }
     return;
 }
-void clearTail()
+void ClearTail()
 {
     for(int i=0; i <64;i++)
     {
@@ -170,9 +181,9 @@ void clearTail()
     return;
 }
 
-void draw() // рисуем поле на экране
+void Draw() 							// СЂРёСЃСѓРµРј РїРѕР»Рµ РЅР° СЌРєСЂР°РЅРµ
 {
-     for(int j=0;j<8;j++) // столбцы
+     for(int j=0;j<8;j++) // СЃС‚РѕР»Р±С†С‹
     {
       int z=0;  
         for (int i=0;i<8;i++)
@@ -192,7 +203,7 @@ void draw() // рисуем поле на экране
         
     }
 }
-void Move(Snake &snake,Apple &apple, int direction) // передвижение головы
+void Move(Snake &snake,Apple &apple, int direction) 		// РїРµСЂРµРґРІРёР¶РµРЅРёРµ РіРѕР»РѕРІС‹
 {
     if(direction == 0 ) //"right"
     {
@@ -214,32 +225,22 @@ void Move(Snake &snake,Apple &apple, int direction) // передвижение головы
     ImageUpdate(snake,apple);
 }
 
-Snake python;
-Apple apple;
 
-
-boolean butt1_flag = 0;
-boolean butt1;
-boolean butt2_flag = 0;
-boolean butt2;
-unsigned long last_press;
 
 void setup() {
-  lc.shutdown(0,false);
-  /* Set the brightness to a medium values */
-  lc.setIntensity(0,1);
-  /* and clear the display */
-  lc.clearDisplay(0);
-  Serial.begin(9600);
+  lc.shutdown(0,false); 
+  lc.setIntensity(0,1); 					// Set the brightness to a medium values 
+  lc.clearDisplay(0);  						// and clear the display 
+  Serial.begin(9600);						// РєРѕРЅСЃРѕР»СЊ РґР»СЏ РІС‹РІРѕРґР° С‚РµСЃРєС‚РѕРІС‹С… РґР°РЅРЅС‹С…
   pinMode(3, INPUT_PULLUP);
   pinMode(5, INPUT_PULLUP);
-  startGame(python,apple);
+  StartGame(python,apple);
   randomSeed(300);
 }
 
 void loop() { 
   lc.clearDisplay(0);
-  butt1 = !digitalRead(3); // считать текущее положение кнопки
+  butt1 = !digitalRead(3); // СЃС‡РёС‚Р°С‚СЊ С‚РµРєСѓС‰РµРµ РїРѕР»РѕР¶РµРЅРёРµ РєРЅРѕРїРєРё
   butt2 = !digitalRead(5);
   
   if (butt1 == 1 && butt1_flag == 0 && millis() - last_press > 50) {
@@ -263,7 +264,7 @@ void loop() {
     butt2_flag = 0;
   }
   
-  draw();
+  Draw();
   Move(python,apple,direct);
   delay(200);
 }
